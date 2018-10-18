@@ -1,5 +1,5 @@
 # MitraStar_GPT-2541GNAC_HA
-MitraStar GPT-2541GNAC (Movistar Spain  Router) Component(Device Tracker) for Home Assistant
+### MitraStar GPT-2541GNAC (Movistar Spain  Router) Component(Device Tracker) for Home Assistant
 
 ## Configuration variables:
 **host (Required):** The hostname/IP address of the MitraStar Router. <br />
@@ -29,4 +29,4 @@ device_tracker:
 ```
 
        
- 3. restart the home assistant service.
+ 3. **Restart** the home assistant service.
