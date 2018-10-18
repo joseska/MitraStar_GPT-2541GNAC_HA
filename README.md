@@ -5,6 +5,7 @@
 **host (Required):** The hostname/IP address of the MitraStar Router. <br />
 **username (Required):** Username for MitraStar Router. 1234 is the default username <br />
 **password (Required):** Password for MitraStar Router. <br />
+The rest of variables are optional and Home Assistant default variables...
 
 ## Installation:
 
