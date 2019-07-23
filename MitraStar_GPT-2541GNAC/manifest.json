@@ -1,0 +1,8 @@
+{
+    "domain": "MitraStar_GPT-2541GNAC",
+    "name": "MitraStar GPT-2541GNAC router - Movistar (Spain)",
+    "documentation": "https://github.com/joseska/MitraStar_GPT-2541GNAC_HA",
+    "requirements": [],
+    "dependencies": [],
+    "codeowners": []
+  }

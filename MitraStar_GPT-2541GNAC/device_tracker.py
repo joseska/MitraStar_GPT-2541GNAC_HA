@@ -12,10 +12,8 @@ import re
 import requests
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
-    DOMAIN, PLATFORM_SCHEMA, DeviceScanner)
-from homeassistant.const import (
-    CONF_HOST, CONF_PASSWORD, CONF_USERNAME, HTTP_HEADER_X_REQUESTED_WITH)
+from homeassistant.components.device_tracker import (DOMAIN, PLATFORM_SCHEMA, DeviceScanner)
+from homeassistant.const import (CONF_HOST, CONF_PASSWORD, CONF_USERNAME, HTTP_HEADER_X_REQUESTED_WITH)
 import homeassistant.helpers.config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,6 +49,7 @@ class MitraStarDeviceScanner(DeviceScanner):
         self.password = password
 
         self.LOGIN_URL = 'http://{ip}/login-login.cgi'.format(**{'ip': self.host})
+        self.headers1 = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36'}
 
         self.last_results = {}
         self.success_init = self._update_info()
@@ -78,17 +77,29 @@ class MitraStarDeviceScanner(DeviceScanner):
         self.last_results = data
         return True
 
+    def _read_table(self, session, url):
+        response = session.get(url, headers=self.headers1)
+        if response.status_code == 200:
+            response_string = str(response.content)
+            return response_string
+        else:
+            este_error = 'Error al conectar al Router desde la url: {}'.format(url)
+            _LOGGER.error(este_error)
+
 
 
     def get_MitraStar_info(self):
         """Retrieve data from MitraStar GPT-2541GNAC Router."""
 
-        headers1 = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.0; WOW64; rv:24.0) Gecko/20100101 Firefox/24.0'}
+        # headers2 = dict(referer=self.LOGIN_URL)
+
+        username1 = str(self.username)
+        password1 = str(self.password)
 
         sessionKey = base64.b64encode(
             '{user}:{pass}'.format(**{
-                'user': self.username,
-                'pass': self.password
+                'user': username1,
+                'pass': password1
             }).encode()
         )
         data1 = {
@@ -98,40 +109,39 @@ class MitraStarDeviceScanner(DeviceScanner):
 
         # Creo la sesion y hago login
         session1 = requests.Session()
-        login_response = session1.post(self.LOGIN_URL, data=data1, headers=headers1)
-
+        login_response = session1.post(self.LOGIN_URL, data=data1, headers=self.headers1)
+       
         # Si conecta bien con el Router
         #if str(login_response) == '<Response [200]>':
         if login_response.status_code == 200:
-            # Pagina1
+
+            # # Pagina1
             url1 = 'http://{}/wlextstationlist.cmd?action=view&wlSsidIdx=2'.format(self.host)
-            response1 = session1.get(url1, headers=headers1, timeout=4)
-            response_string1 = str(response1.content)
-            result1 = self.parse_macs.findall(response_string1)
-
-            # Pagina2
             url2 = 'http://{}/wlextstationlist.cmd?action=view&wlSsidIdx=1'.format(self.host)
-            response2 = session1.get(url2, headers=headers1, timeout=4)
-            response_string2 = str(response1.content)
-            result2 = self.parse_macs.findall(response_string2)
-
-            # Pagina3
             url3 = 'http://{}/arpview.cmd'.format(self.host)
-            response3 = session1.get(url3, headers=headers1, timeout=4)
-            response_string3 = str(response3.content)
-            result3 = self.parse_macs.findall(response_string3)
 
-            # Lo Uno Todo en "result1" y Borro Duplicados. Así medio raro, pero funciona....
-            result1.extend([element for element in result2 if element not in result1])
-            result1.extend([element for element in result3 if element not in result1])
+            result1 = self._read_table(session1, url1)
+            MAC_Address1 = self.parse_macs.findall(result1)
+
+            result2 = self._read_table(session1, url2)
+            MAC_Address2 = self.parse_macs.findall(result2)
+
+            result3 = self._read_table(session1, url3)
+            MAC_Address3 = self.parse_macs.findall(result3)
+
+
+            # Lo Uno Todo y Borro Duplicados. Así medio raro....
+            MAC_Address1.extend([element for element in MAC_Address2 if element not in MAC_Address1])
+            MAC_Address1.extend([element for element in MAC_Address3 if element not in MAC_Address1])
+
 
         else:
-            result1 = None
-            _LOGGER.info('Error connecting to the router...')
+            MAC_Address1 = None
+            _LOGGER.error('Error connecting to the router...')
 
         # Cierro la sesion
-        session1.close()
+        #session1.close()
 
-        return result1
+        return MAC_Address1
 
 
