@@ -9,18 +9,18 @@ The rest of variables are optional and Home Assistant default variables...
 
 ## Installation:
 
-1. Download and place **mitrastar_gpt2541gnac.py** files in the home-assistant folder like this:
+1. Download and place **MitraStar_GPT-2541GNAC** folder in the home-assistant custom components folder like this:
 ```
- .homeassistant/custom_components/device_tracker/mitrastar_gpt2541gnac.py
+ .homeassistant/custom_components/MitraStar_GPT-2541GNAC/*.*
 ```
 
 2. Add the new platform in the **configuration.yaml**:
 ```
 device_tracker:
-  - platform: mitrastar_gpt2541gnac
+  - platform: MitraStar_GPT-2541GNAC
     host: 192.168.1.1
     username: 1234
-    password: password
+    password: router_password
     interval_seconds: 120
     consider_home: 200
     new_device_defaults:
