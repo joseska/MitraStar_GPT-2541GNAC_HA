@@ -43,6 +43,7 @@ class MitraStarDeviceScanner(DeviceScanner):
         password = config[CONF_PASSWORD]
 
         self.parse_macs = re.compile(r'([0-9a-fA-F]{2}:' + '[0-9a-fA-F]{2}:' + '[0-9a-fA-F]{2}:' + '[0-9a-fA-F]{2}:' + '[0-9a-fA-F]{2}:' + '[0-9a-fA-F]{2})')
+        self.parse_dhcp = re.compile(r'<td>([0-9a-zA-Z\-._]+)<\/td><td>([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})<\/td><td>([0-9]+.[0-9]+.[0-9]+.[0-9]+.[0-9]+)')
 
         self.host = host
         self.username = username
@@ -52,6 +53,7 @@ class MitraStarDeviceScanner(DeviceScanner):
         self.headers1 = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36'}
 
         self.last_results = {}
+        self.hostnames = {}
         self.success_init = self._update_info()
 
     def scan_devices(self):
@@ -62,7 +64,12 @@ class MitraStarDeviceScanner(DeviceScanner):
 
     def get_device_name(self, device):
         """This router doesn't save the name of the wireless device."""
-        return None
+        match = [element[0] for element in self.hostnames if element[1].lower()==device]
+        if len(match) > 0:
+            device_name = match[0]
+        else:
+            device_name =  None
+        return device_name
 
     def _update_info(self):
         """Ensure the information from the MitraStar router is up to date.
@@ -70,17 +77,18 @@ class MitraStarDeviceScanner(DeviceScanner):
         """
         _LOGGER.info('Checking MitraStar GPT-2541GNAC Router')
 
-        data = self.get_MitraStar_info()
+        data, hostnames = self.get_MitraStar_info()
         if not data:
             return False
 
         self.last_results = data
+        self.hostnames = hostnames
         return True
 
     def _read_table(self, session, url):
         response = session.get(url, headers=self.headers1)
         if response.status_code == 200:
-            response_string = str(response.content)
+            response_string = str(response.content, "utf-8")
             return response_string
         else:
             este_error = 'Error al conectar al Router desde la url: {}'.format(url)
@@ -119,20 +127,26 @@ class MitraStarDeviceScanner(DeviceScanner):
             url1 = 'http://{}/wlextstationlist.cmd?action=view&wlSsidIdx=2'.format(self.host)
             url2 = 'http://{}/wlextstationlist.cmd?action=view&wlSsidIdx=1'.format(self.host)
             url3 = 'http://{}/arpview.cmd'.format(self.host)
+            url4 = 'http://{}/dhcpinfo.html'.format(self.host)
 
-            result1 = self._read_table(session1, url1)
+            result1 = self._read_table(session1, url1).lower()
             MAC_Address1 = self.parse_macs.findall(result1)
 
-            result2 = self._read_table(session1, url2)
+            result2 = self._read_table(session1, url2).lower()
             MAC_Address2 = self.parse_macs.findall(result2)
 
-            result3 = self._read_table(session1, url3)
+            result3 = self._read_table(session1, url3).lower()
             MAC_Address3 = self.parse_macs.findall(result3)
+
+            result4 = self._read_table(session1, url4)
+            result4 = result4.replace('\n ','').replace(' ','')
+            hostnames = self.parse_dhcp.findall(result4)
 
 
             # Lo Uno Todo y Borro Duplicados. Así medio raro....
             MAC_Address1.extend([element for element in MAC_Address2 if element not in MAC_Address1])
             MAC_Address1.extend([element for element in MAC_Address3 if element not in MAC_Address1])
+            _LOGGER.info('MitraStar GPT-2541GNAC Router: Found %d devices' %len(MAC_Address1))
 
 
         else:
@@ -142,6 +156,5 @@ class MitraStarDeviceScanner(DeviceScanner):
         # Cierro la sesion
         #session1.close()
 
-        return MAC_Address1
-
+        return MAC_Address1, hostnames
 
